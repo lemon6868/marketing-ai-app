@@ -423,10 +423,11 @@
     },
     {
       key: "video", no: "03", label: "KỊCH BẢN VIDEO", tool: "→ CapCut / Seedance",
-      example: "Cảnh 1 (0-4s): cận cảnh đá lắc trong bình shaker\n[playful] Chờ đã... có gì thơm thơm nè!\nCảnh 2 (4-10s): đổ cà phê ra ly, rắc muối dừa\n[giggles] Đây rồi — Cà Phê Muối Dừa!\nCảnh 3 (10-15s): khách nhấp thử, biểu cảm bất ngờ\n[gasp] Ơ... sao lại ngon vậy trời?!\nChữ overlay: \"Chỉ 29K – tuần này thôi\"\nNhạc: nền chill, nhịp vừa, âm lượng thấp\n(Voice-over trên sẵn sàng dán vào giọng AI cảm xúc, ví dụ giọng Adam)",
+      example: "Cảnh 1 (0-4s): cận cảnh đá lắc trong bình shaker\n[playful] Chờ đã... có gì thơm thơm nè!\n\nCảnh 2 (4-10s): đổ cà phê ra ly, rắc muối dừa\n[giggles] Đây rồi — Cà Phê Muối Dừa!\n\nCảnh 3 (10-15s): khách nhấp thử, biểu cảm bất ngờ\n[gasp] Ơ... sao lại ngon vậy trời?!\nChữ overlay: \"Chỉ 29K – tuần này thôi\"\n\nNhạc: nền chill, nhịp vừa, âm lượng thấp\n(Voice-over trên sẵn sàng dán vào giọng AI cảm xúc, ví dụ giọng Adam)",
       prompt: function (ctx, style) {
         var base = "Bạn là biên kịch video ngắn mạng xã hội, kịch bản dùng để dựng bằng CapCut hoặc công cụ AI tạo video.\n" + ctx +
-          "\nViết kịch bản video 15-20 giây quay bằng điện thoại: liệt kê từng cảnh theo mốc thời gian, mỗi cảnh gồm hành động, lời thoại/voice-over và chữ overlay đề xuất. Kết thúc bằng 1 dòng gợi ý nhạc nền.\n";
+          "\nViết kịch bản video 15-20 giây quay bằng điện thoại: liệt kê từng cảnh theo mốc thời gian, mỗi cảnh gồm hành động, lời thoại/voice-over và chữ overlay đề xuất. Kết thúc bằng 1 dòng gợi ý nhạc nền.\n" +
+          "Định dạng thuần văn bản dễ đọc, mỗi cảnh là 1 đoạn riêng cách nhau đúng 1 dòng trống, để copy dán thẳng vào CapCut (khung kịch bản hoặc công cụ đọc giọng AI) mà không cần chỉnh sửa lại.\n";
         var styleLine = "Phong cách: " + style.label + " (" + style.tone + ").\n";
         var tagRule = style.tag
           ? "Đặt tag cảm xúc trong ngoặc vuông ngay trước mỗi câu voice-over (ví dụ: [giggles] Bạn đã thử món này chưa?), sẵn sàng dán vào công cụ đọc giọng AI cảm xúc (ví dụ giọng Adam trên ElevenLabs). Chỉ dùng tag trong danh sách: [gasp], [whispering], [giggles], [sad], [confident], [playful], [frustrated], [sarcastic], [dry tone], [sighs], [laughs softly], [clears throat], [excited], [deadpan], [chuckles], [laughs hysterically].\n"
@@ -436,10 +437,11 @@
     },
     {
       key: "caption", no: "04", label: "CAPTION & HASHTAG", tool: "→ Grok — bắt trend",
-      example: "Bản 1 (chuyên nghiệp): Cà Phê Muối Dừa chính thức có mặt tại quán. Vị mặn nhẹ hoà cùng vị béo dừa, cân bằng hoàn hảo với đắng cà phê.\n#CaPheMuoiDua #QuanCaPhe #MonMoi #CaPheNgon #AnUongMoiNgay\n\nBản 2 (gần gũi): Ai bảo cà phê chỉ có ngọt với đắng? Quán vừa ra món muối dừa, uống vào là ghiền luôn á.\n#ThuLaGhien #CaPheMuoiDua #QuanQuenThuoc #MonMoiRaMat #CaPheSangSom\n\nBản 3 (kêu gọi mạnh): Chỉ tuần này: 2 ly Cà Phê Muối Dừa đầu tiên giảm 20%. Đến trễ là hết suất ưu đãi đó nha!\n#UuDaiTuanNay #CaPheMuoiDua #GheLaMe #SaleTuan #QuanCaPhe",
+      example: "Bản 1 (chuyên nghiệp): ☕ Cà Phê Muối Dừa chính thức có mặt tại quán. Vị mặn nhẹ hoà cùng vị béo dừa 🥥, cân bằng hoàn hảo với đắng cà phê.\n#CaPheMuoiDua #QuanCaPhe #MonMoi #CaPheNgon #AnUongMoiNgay\n\nBản 2 (gần gũi): Ai bảo cà phê chỉ có ngọt với đắng? 🤔 Quán vừa ra món muối dừa, uống vào là ghiền luôn á 😍\n#ThuLaGhien #CaPheMuoiDua #QuanQuenThuoc #MonMoiRaMat #CaPheSangSom\n\nBản 3 (kêu gọi mạnh): 🔥 Chỉ tuần này: 2 ly Cà Phê Muối Dừa đầu tiên giảm 20%! ⏰ Đến trễ là hết suất ưu đãi đó nha!\n#UuDaiTuanNay #CaPheMuoiDua #GheLaMe #SaleTuan #QuanCaPhe",
       prompt: function (ctx, style) {
         return "Bạn là copywriter mạng xã hội.\n" + ctx +
           "\nViết 3 phiên bản caption cho bài đăng tuần này, cùng theo phong cách " + style.label + " (" + style.tone + ") nhưng khác mức độ cường độ (nhẹ / vừa / mạnh), mỗi caption kèm 5 hashtag tiếng Việt liên quan ngay bên dưới.\n" +
+          "Mỗi caption chèn 2-4 icon/emoji bắt mắt, phù hợp ngữ cảnh và phong cách, đặt tự nhiên xen trong câu (không dồn hết vào 1 chỗ).\n" +
           "Không dùng markdown. Tối đa 150 từ.";
       }
     },
@@ -464,18 +466,40 @@
   STATIONS.forEach(function (st) {
     var ticket = document.createElement("div");
     ticket.className = "ticket";
+    var extraBody = st.key === "image" ? '<div class="ticket-images" id="images-' + st.key + '" hidden></div>' : "";
+    var extraFoot = st.key === "video"
+      ? '<a class="capcut-link" id="capcut-' + st.key + '" href="https://www.capcut.com/" target="_blank" rel="noopener" hidden>Mở CapCut ↗</a>' +
+        '<button type="button" class="copy-btn" id="copy-' + st.key + '" hidden>📋 Sao chép kịch bản</button>'
+      : "";
     ticket.innerHTML =
       '<div class="ticket-head"><span>PHIẾU ' + st.no + " · " + st.label + '</span><span class="to">' + st.tool + '</span></div>' +
       '<div class="perforation"></div>' +
       '<div class="ticket-body placeholder" id="body-' + st.key + '">' + st.example + '</div>' +
-      '<div class="ticket-foot"><button type="button" class="retry" id="retry-' + st.key + '" hidden>Tạo lại trạm này</button></div>';
+      extraBody +
+      '<div class="ticket-foot">' + extraFoot + '<button type="button" class="retry" id="retry-' + st.key + '" hidden>Tạo lại trạm này</button></div>';
     ticketsEl.appendChild(ticket);
 
     els[st.key] = {
       body: document.getElementById("body-" + st.key),
-      retry: document.getElementById("retry-" + st.key)
+      retry: document.getElementById("retry-" + st.key),
+      images: document.getElementById("images-" + st.key),
+      copyBtn: document.getElementById("copy-" + st.key),
+      capcutLink: document.getElementById("capcut-" + st.key)
     };
     els[st.key].retry.addEventListener("click", function () { runStation(st); });
+
+    if (els[st.key].copyBtn) {
+      els[st.key].copyBtn.addEventListener("click", function () {
+        var text = els[st.key].body.textContent || "";
+        var btn = els[st.key].copyBtn;
+        if (!navigator.clipboard) return;
+        navigator.clipboard.writeText(text).then(function () {
+          var old = btn.textContent;
+          btn.textContent = "✓ Đã sao chép!";
+          setTimeout(function () { btn.textContent = old; }, 1800);
+        }).catch(function () {});
+      });
+    }
   });
 
   function currentContext() {
@@ -488,18 +512,72 @@
 
   var runToken = 0;
 
+  async function runImageGallery(e, ctx, style, myToken) {
+    e.images.hidden = false;
+    e.images.innerHTML = '<div class="img-loading">Đang tạo ảnh gợi ý bằng AI...</div>';
+    var prompt = "Ảnh chụp marketing cho mạng xã hội, phong cách " + style.label.toLowerCase() + " (" + style.tone + "). " +
+      ctx + " Ảnh chân thực, ánh sáng đẹp, bố cục vuông, không có chữ trên ảnh.";
+    try {
+      var res = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: prompt, count: 4 })
+      });
+      var data = null;
+      try { data = await res.json(); } catch (e2) { data = null; }
+      if (myToken !== runToken) return;
+      if (!res.ok) {
+        var msg = (data && data.error) || ("Lỗi server (" + res.status + ")");
+        e.images.innerHTML = '<div class="img-error">⚠ Không tạo được ảnh gợi ý: ' + msg + "</div>";
+        return;
+      }
+      var images = (data && data.images) || [];
+      if (!images.length) {
+        e.images.innerHTML = '<div class="img-error">⚠ Không tạo được ảnh gợi ý, thử lại nhé.</div>';
+        return;
+      }
+      e.images.innerHTML = "";
+      images.forEach(function (img) {
+        var wrap = document.createElement("div");
+        wrap.className = "img-item";
+        var el = document.createElement("img");
+        el.src = "data:" + (img.mimeType || "image/png") + ";base64," + img.data;
+        el.alt = "Ảnh gợi ý do AI tạo";
+        el.loading = "lazy";
+        wrap.appendChild(el);
+        e.images.appendChild(wrap);
+      });
+    } catch (err) {
+      if (myToken !== runToken) return;
+      e.images.innerHTML = '<div class="img-error">⚠ Không tạo được ảnh gợi ý: ' + errorCopyGeneric(err) + "</div>";
+    }
+  }
+
   async function runStation(st) {
     var e = els[st.key];
     var myToken = runToken;
     e.retry.hidden = true;
+    if (e.copyBtn) e.copyBtn.hidden = true;
+    if (e.capcutLink) e.capcutLink.hidden = true;
+    if (e.images) { e.images.hidden = true; e.images.innerHTML = ""; }
     e.body.textContent = "Đang soạn...";
     e.body.classList.remove("placeholder");
 
     try {
-      var text = await generateOnce(st.prompt(currentContext(), getStyle()), 2048);
+      var ctx = currentContext();
+      var style = getStyle();
+      var text = await generateOnce(st.prompt(ctx, style), 2048);
       if (myToken !== runToken) return;
       e.body.textContent = text;
       e.retry.hidden = false;
+
+      if (st.key === "video") {
+        if (e.copyBtn) e.copyBtn.hidden = false;
+        if (e.capcutLink) e.capcutLink.hidden = false;
+      }
+      if (st.key === "image" && e.images) {
+        runImageGallery(e, ctx, style, myToken);
+      }
     } catch (err) {
       if (myToken !== runToken) return;
       e.body.textContent = "⚠ " + errorCopyGeneric(err);

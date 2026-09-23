@@ -12,6 +12,8 @@ const PORT = process.env.PORT || 3000;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
 const ANTHROPIC_VERSION = '2023-06-01';
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+const GOOGLE_IMAGE_MODEL = process.env.GOOGLE_IMAGE_MODEL || 'gemini-2.5-flash-image';
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -33,7 +35,7 @@ function isRateLimited(ip) {
 }
 
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, hasApiKey: Boolean(ANTHROPIC_API_KEY) });
+  res.json({ ok: true, hasApiKey: Boolean(ANTHROPIC_API_KEY), hasImageKey: Boolean(GOOGLE_API_KEY) });
 });
 
 // Lưu đánh giá sao của khách vào file JSON đơn giản trên server (v1 chưa có
@@ -136,9 +138,76 @@ app.post('/api/messages', async (req, res) => {
   }
 });
 
+// Thin, secure proxy to Google's Gemini image API (model tạo ảnh "Nano Banana").
+// Dùng endpoint generateContent cổ điển, ổn định lâu năm, thay vì "Interactions
+// API" mới hơn — vì tài liệu công khai của API mới chưa có ví dụ JSON cụ thể để
+// đối chiếu chắc chắn. Gọi song song nhiều lần để trả về vài ảnh gợi ý khác nhau.
+app.post('/api/generate-image', async (req, res) => {
+  if (!GOOGLE_API_KEY) {
+    return res.status(500).json({
+      error: 'Server chưa cấu hình GOOGLE_API_KEY. Xem README.md để lấy key miễn phí tại aistudio.google.com rồi thêm vào file .env.'
+    });
+  }
+
+  if (isRateLimited(req.ip)) {
+    return res.status(429).json({
+      error: 'Bạn đã dùng quá nhiều lần trong 10 phút qua. Vui lòng thử lại sau ít phút.'
+    });
+  }
+
+  const { prompt, count } = req.body || {};
+  if (!prompt || typeof prompt !== 'string') {
+    return res.status(400).json({ error: 'Thiếu prompt để tạo ảnh.' });
+  }
+  const n = Math.min(Math.max(Number(count) || 4, 1), 5);
+
+  try {
+    const calls = Array.from({ length: n }, () =>
+      fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GOOGLE_IMAGE_MODEL + ':generateContent', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-goog-api-key': GOOGLE_API_KEY
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseModalities: ['IMAGE'] }
+        })
+      }).then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json().catch(() => null) }))
+    );
+
+    const results = await Promise.all(calls);
+    const images = [];
+    let lastError = null;
+
+    for (const r of results) {
+      if (!r.ok) {
+        lastError = (r.data && r.data.error && r.data.error.message) || ('Lỗi Google API (' + r.status + ')');
+        continue;
+      }
+      const parts = (r.data && r.data.candidates && r.data.candidates[0] && r.data.candidates[0].content && r.data.candidates[0].content.parts) || [];
+      const imgPart = parts.find((p) => p.inlineData && p.inlineData.data);
+      if (imgPart) {
+        images.push({ mimeType: imgPart.inlineData.mimeType || 'image/png', data: imgPart.inlineData.data });
+      }
+    }
+
+    if (images.length === 0) {
+      return res.status(502).json({ error: 'Không tạo được ảnh nào: ' + (lastError || 'phản hồi không chứa ảnh.') });
+    }
+
+    res.json({ images });
+  } catch (err) {
+    res.status(502).json({ error: 'Không gọi được Google API: ' + err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log('Marketing AI server chạy tại http://localhost:' + PORT);
   if (!ANTHROPIC_API_KEY) {
     console.warn('CẢNH BÁO: chưa có ANTHROPIC_API_KEY trong .env — các tính năng AI sẽ báo lỗi cho tới khi bạn thêm key.');
+  }
+  if (!GOOGLE_API_KEY) {
+    console.warn('CẢNH BÁO: chưa có GOOGLE_API_KEY trong .env — Phiếu 02 sẽ không tạo được ảnh gợi ý cho tới khi bạn thêm key.');
   }
 });

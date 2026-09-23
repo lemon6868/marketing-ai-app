@@ -29,6 +29,14 @@ Mở `.env`, dán API key (lấy tại [console.anthropic.com](https://console.a
 ANTHROPIC_API_KEY=sk-ant-...key-thật-của-bạn...
 ```
 
+Muốn Phiếu 02 tự tạo ảnh gợi ý thật (không chỉ concept chữ), lấy thêm 1 API key **miễn phí** tại [aistudio.google.com](https://aistudio.google.com/) (mục "Get API key"), rồi điền vào `.env`:
+
+```
+GOOGLE_API_KEY=...key-thật-của-bạn...
+```
+
+Không có key này, app vẫn chạy bình thường — Phiếu 02 chỉ hiện thông báo chưa cấu hình thay vì ảnh.
+
 ## Chạy thử
 
 ```bash
@@ -52,7 +60,7 @@ App là 1 server Node đơn giản, chạy được trên bất kỳ nền tản
 - **Railway.app** — tương tự Render, deploy bằng vài cú click.
 - **Fly.io** hoặc VPS riêng (DigitalOcean, Vultr...) — cần tự cấu hình domain + HTTPS (dùng Let's Encrypt/Caddy), phù hợp khi cần kiểm soát nhiều hơn.
 
-Dù chọn nền tảng nào, luôn set `ANTHROPIC_API_KEY` là biến môi trường trên đó — **không** commit file `.env` lên Git (đã có trong `.gitignore`).
+Dù chọn nền tảng nào, luôn set `ANTHROPIC_API_KEY` (và `GOOGLE_API_KEY` nếu dùng tạo ảnh) là biến môi trường trên đó — **không** commit file `.env` lên Git (đã có trong `.gitignore`).
 
 ## Đánh giá sao từ khách hàng
 
@@ -65,6 +73,12 @@ http://localhost:3000/api/feedback/summary
 ```
 
 (khi đã deploy thì đổi `localhost:3000` thành domain thật — endpoint này hiện chưa có xác thực, cân nhắc thêm mật khẩu/token đơn giản trước khi công khai domain thật nếu không muốn ai cũng xem được).
+
+## Các nâng cấp so với bản đầu
+
+- **Phiếu 02 (Concept hình ảnh)**: ngoài concept chữ, app còn gọi Google Gemini (model "Nano Banana", `gemini-2.5-flash-image`) để tự tạo 4 ảnh gợi ý thật, hiển thị ngay trong phiếu. Cần `GOOGLE_API_KEY` (xem mục Cài đặt lần đầu ở trên) — nếu chưa có key, phiếu chỉ báo lỗi nhẹ, các phần khác của app không bị ảnh hưởng.
+- **Phiếu 03 (Kịch bản video)**: kịch bản được định dạng thuần văn bản, mỗi cảnh cách nhau 1 dòng trống để copy dán thẳng vào CapCut. Có nút "📋 Sao chép kịch bản" (copy nhanh vào clipboard) và nút "Mở CapCut ↗" (mở trang CapCut ở tab mới) ngay trong phiếu.
+- **Phiếu 04 (Caption & hashtag)**: mỗi caption được AI chèn thêm 2-4 icon/emoji bắt mắt, đặt tự nhiên xen trong câu.
 
 ## Giới hạn của v1 (biết trước để không bất ngờ)
 

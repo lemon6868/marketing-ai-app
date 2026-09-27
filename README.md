@@ -37,6 +37,13 @@ GOOGLE_API_KEY=...key-thật-của-bạn...
 
 Không có key này, app vẫn chạy bình thường — Phiếu 02 chỉ hiện thông báo chưa cấu hình thay vì ảnh.
 
+**Lưu ý quan trọng — tạo ảnh KHÔNG nằm trong gói miễn phí của Google**: khác với model chat (được miễn phí hào phóng), các model tạo ảnh ("Nano Banana") có hạn mức miễn phí là 0 — Google yêu cầu tài khoản phải **bật thanh toán (billing/thẻ)** trên Google Cloud thì mới gọi được, dù chi phí thực tế rất rẻ (~0,03-0,07 USD/ảnh tuỳ độ phân giải, xem [trang giá](https://ai.google.dev/gemini-api/docs/pricing)). Cách bật:
+1. Vào [aistudio.google.com](https://aistudio.google.com/) → mở project đang dùng.
+2. Vào phần **Billing** / **Set up billing** (hoặc qua [Google Cloud Console](https://console.cloud.google.com/) → Billing) → liên kết 1 tài khoản thanh toán (thẻ) vào project đó.
+3. Sau khi bật billing, dùng lại đúng `GOOGLE_API_KEY` cũ — không cần đổi key.
+
+Nếu chưa bật billing, Phiếu 02 sẽ báo lỗi kiểu "Quota exceeded... limit: 0" — đây là dấu hiệu cần bật thanh toán, không phải lỗi code.
+
 ## Chạy thử
 
 ```bash

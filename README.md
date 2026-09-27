@@ -79,26 +79,45 @@ Dữ liệu đánh giá được lưu ở server, file `data/feedback.json` (t�
 http://localhost:3000/api/feedback/summary
 ```
 
-(khi đã deploy thì đổi `localhost:3000` thành domain thật — endpoint này hiện chưa có xác thực, cân nhắc thêm mật khẩu/token đơn giản trước khi công khai domain thật nếu không muốn ai cũng xem được).
+(khi đã deploy thì đổi `localhost:3000` thành domain thật).
+
+Endpoint này giờ có thể khoá bằng token: đặt biến môi trường `FEEDBACK_TOKEN` (chuỗi bí mật tuỳ ý bạn chọn) trong `.env` hoặc trên Render, sau đó chỉ xem được khi thêm đúng token vào URL:
+
+```
+https://domain-that-cua-ban/api/feedback/summary?token=chuoi-bi-mat-ban-dat
+```
+
+Không đặt `FEEDBACK_TOKEN` thì endpoint vẫn mở tự do như trước (không khuyến khích khi đã deploy công khai lâu dài).
 
 ## Các nâng cấp so với bản đầu
 
-- **Phiếu 02 (Concept hình ảnh)**: ngoài concept chữ, app còn gọi Google Gemini (model "Nano Banana", `gemini-2.5-flash-image`) để tự tạo 4 ảnh gợi ý thật, hiển thị ngay trong phiếu. Cần `GOOGLE_API_KEY` (xem mục Cài đặt lần đầu ở trên) — nếu chưa có key, phiếu chỉ báo lỗi nhẹ, các phần khác của app không bị ảnh hưởng.
+- **Phiếu 02 (Concept hình ảnh)**: ngoài concept chữ, app còn gọi Google Gemini (model "Nano Banana", mặc định `gemini-3.1-flash-lite-image`) để tự tạo 4 ảnh gợi ý thật, hiển thị ngay trong phiếu. Cần `GOOGLE_API_KEY` **và bật billing** trên Google Cloud (xem mục Cài đặt lần đầu ở trên) — nếu chưa có, phiếu chỉ báo lỗi nhẹ, các phần khác của app không bị ảnh hưởng.
 - **Phiếu 03 (Kịch bản video)**: kịch bản được định dạng thuần văn bản, mỗi cảnh cách nhau 1 dòng trống để copy dán thẳng vào CapCut. Có nút "📋 Sao chép kịch bản" (copy nhanh vào clipboard) và nút "Mở CapCut ↗" (mở trang CapCut ở tab mới) ngay trong phiếu.
 - **Phiếu 04 (Caption & hashtag)**: mỗi caption được AI chèn thêm 2-4 icon/emoji bắt mắt, đặt tự nhiên xen trong câu.
+- **Streaming**: 5 phiếu nội dung và "Hội đồng cố vấn" giờ hiện chữ chạy dần từng chút một (giống ChatGPT) thay vì chờ AI viết xong hết mới hiện, qua endpoint `/api/messages/stream`. Riêng khung "AI trợ lý" điền form (dùng tool-calling để tự điền order) vẫn chờ xong mới hiện, do stream xen kẽ với tool-use phức tạp hơn nên chưa làm ở bản này.
+- **Bảo vệ endpoint đánh giá**: `/api/feedback/summary` giờ khoá được bằng `FEEDBACK_TOKEN` (xem mục Đánh giá sao ở trên); `/api/feedback` (gửi đánh giá) cũng có rate limit riêng chống spam ảo.
+- **Dọn bộ nhớ rate limit**: danh sách IP theo dõi rate limit được dọn định kỳ, tránh phình to vô hạn khi server chạy lâu ngày.
 
 ## Giới hạn của v1 (biết trước để không bất ngờ)
 
-- **Không streaming**: AI trả lời xong hết mới hiện ra (không gõ chữ dần như bản demo trước). Có thể nâng cấp sau bằng Server-Sent Events.
 - **Không có tài khoản người dùng**: form/chat không lưu lại giữa các lần mở app khác nhau. Mỗi phiên là độc lập.
 - **Không tự đăng bài / kết nối Facebook-TikTok-YouTube thật**: trạm "Thiết lập kênh" chỉ viết sẵn nội dung để bạn tự copy dán — việc tự động đăng bài cần tích hợp API chính thức của từng nền tảng (giai đoạn sau).
-- **Chi phí API**: mỗi lần tạo nội dung tốn usage thật trên tài khoản Anthropic của bạn (khác với bản demo trước dùng usage của người xem). Theo dõi chi phí tại console.anthropic.com → Usage.
+- **Chi phí API**: mỗi lần tạo nội dung tốn usage thật trên tài khoản Anthropic (và Google nếu dùng Phiếu 02) của bạn. Theo dõi chi phí tại console.anthropic.com → Usage và Google Cloud Console → Billing.
 - **Đã có rate limit cơ bản**: tối đa 20 lượt gọi AI / 10 phút / mỗi IP (chỉnh trong `server.js`, biến `RATE_LIMIT_MAX`). Lưu trong bộ nhớ nên chỉ đúng khi chạy 1 tiến trình duy nhất — nếu sau này scale nhiều instance, cần chuyển sang Redis hoặc dịch vụ rate-limit riêng.
-- **Đánh giá sao chưa có xác thực**: endpoint `/api/feedback/summary` ai có link cũng xem được — cân nhắc thêm bảo vệ trước khi deploy công khai lâu dài.
+- **Khung "AI trợ lý" (điền form) chưa streaming**: xem mục nâng cấp ở trên.
+
+## Chuẩn bị lên App Store / Google Play
+
+Đây hiện là **web app / PWA** — cài được vào màn hình chính và dùng gần như app thật, nhưng **không thể nộp thẳng file này lên App Store hay Google Play**: cả hai store đều yêu cầu 1 gói cài đặt native (`.ipa` cho iOS, `.aab`/`.apk` cho Android), không nhận thẳng địa chỉ web.
+
+Đường đi thực tế phổ biến nhất cho PWA:
+- **Android**: dùng công cụ [PWABuilder](https://www.pwabuilder.com/) (miễn phí, của Microsoft) — nhập domain đã deploy, nó tự đóng gói PWA thành file `.aab` dạng "Trusted Web Activity" để nộp lên Google Play Console. Cần 1 tài khoản Google Play Console (phí đăng ký 1 lần ~25 USD).
+- **iOS**: PWABuilder cũng hỗ trợ đóng gói iOS, nhưng thực tế thường cần thêm bước dùng Xcode để build và ký (cần máy Mac + tài khoản Apple Developer, phí ~99 USD/năm) trước khi nộp lên App Store Connect.
+- Nội dung mô tả, tên app, từ khóa đã soạn sẵn ở `app-store-listing.md` — dùng luôn khi điền form trên Play Console / App Store Connect.
+
+Việc đóng gói native (bước PWABuilder + tài khoản dev) là công đoạn riêng, cần bạn có tài khoản Google Play/Apple Developer đứng tên mình — ngoài phạm vi việc sửa code có thể làm giúp trong phiên này.
 
 ## Bước tiếp theo gợi ý
 
-- Thêm streaming để trải nghiệm mượt hơn (giống bản demo trước).
 - Thêm lưu trữ (database) nếu muốn giữ lịch sử order giữa các lần mở app, hoặc chuyển feedback từ file JSON sang DB thật khi lượng đánh giá lớn.
-- Thêm xác thực đơn giản cho `/api/feedback/summary` trước khi deploy công khai.
-- Đăng ký domain riêng + submit lên App Store/Google Play (xem file `app-store-listing.md` đã soạn sẵn tên app, mô tả, từ khóa).
+- Đóng gói PWA thành app native qua PWABuilder rồi nộp Google Play / App Store (xem mục ngay trên).

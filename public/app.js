@@ -26,14 +26,46 @@
       .trim();
   }
 
-  async function generateOnce(prompt, maxTokens) {
-    var data = await callClaude({
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: maxTokens || 2048
+  // Gọi bản streaming (chỉ dùng khi KHÔNG cần tools) — chữ hiện dần qua
+  // onDelta(fullTextSoFar) thay vì chờ AI viết xong hết mới hiện.
+  async function streamClaude(payload, onDelta) {
+    var res = await fetch("/api/messages/stream", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload)
     });
-    var text = extractText(data.content);
-    if (!text) throw new Error("AI không trả về nội dung, thử lại nhé.");
-    return text;
+    if (!res.ok || !res.body) {
+      var data = null;
+      try { data = await res.json(); } catch (e) {}
+      throw new Error((data && data.error) || ("Lỗi server (" + res.status + ")"));
+    }
+    var reader = res.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = "";
+    var full = "";
+    while (true) {
+      var chunk = await reader.read();
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream: true });
+      var lines = buffer.split("\n");
+      buffer = lines.pop();
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (line.indexOf("data:") !== 0) continue;
+        var jsonStr = line.slice(5).trim();
+        if (!jsonStr) continue;
+        var evt;
+        try { evt = JSON.parse(jsonStr); } catch (e) { continue; }
+        if (evt.type === "content_block_delta" && evt.delta && evt.delta.type === "text_delta") {
+          full += evt.delta.text;
+          onDelta(full);
+        } else if (evt.type === "error") {
+          throw new Error((evt.error && evt.error.message) || "Lỗi khi AI trả lời.");
+        }
+      }
+    }
+    if (!full) throw new Error("AI không trả về nội dung, thử lại nhé.");
+    return full;
   }
 
   async function runWithTools(opts) {
@@ -329,11 +361,14 @@
             toolExecutors: opts.toolExecutors
           });
         } else {
-          var data = await callClaude({
-            messages: [{ role: "user", content: opts.leadingInstruction }].concat(turns),
-            max_tokens: 2048
-          });
-          replyText = extractText(data.content) || "AI chưa trả lời được, thử lại nhé.";
+          replyText = await streamClaude(
+            { messages: [{ role: "user", content: opts.leadingInstruction }].concat(turns), max_tokens: 2048 },
+            function (partial) {
+              thinking.classList.remove("thinking");
+              thinking.textContent = partial;
+              opts.logEl.scrollTop = opts.logEl.scrollHeight;
+            }
+          );
         }
         thinking.classList.remove("thinking");
         thinking.textContent = replyText;
@@ -566,7 +601,13 @@
     try {
       var ctx = currentContext();
       var style = getStyle();
-      var text = await generateOnce(st.prompt(ctx, style), 2048);
+      var text = await streamClaude(
+        { messages: [{ role: "user", content: st.prompt(ctx, style) }], max_tokens: 2048 },
+        function (partial) {
+          if (myToken !== runToken) return;
+          e.body.textContent = partial;
+        }
+      );
       if (myToken !== runToken) return;
       e.body.textContent = text;
       e.retry.hidden = false;

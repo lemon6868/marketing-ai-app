@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { Readable } = require('stream');
 
 const app = express();
 // Khi deploy sau 1 lớp reverse proxy (Render, Railway, Heroku...), bật dòng
@@ -14,6 +15,7 @@ const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
 const ANTHROPIC_VERSION = '2023-06-01';
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const GOOGLE_IMAGE_MODEL = process.env.GOOGLE_IMAGE_MODEL || 'gemini-3.1-flash-lite-image';
+const FEEDBACK_TOKEN = process.env.FEEDBACK_TOKEN;
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -32,6 +34,29 @@ function isRateLimited(ip) {
   hits.push(now);
   rateLimitHits.set(ip, hits);
   return hits.length > RATE_LIMIT_MAX;
+}
+
+// Dọn định kỳ các IP đã hết hạn theo dõi, tránh Map phình to vô hạn khi
+// server chạy lâu ngày (rò rỉ bộ nhớ nhẹ nếu không dọn).
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, hits] of rateLimitHits) {
+    const fresh = hits.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+    if (fresh.length === 0) rateLimitHits.delete(ip);
+    else rateLimitHits.set(ip, fresh);
+  }
+}, RATE_LIMIT_WINDOW_MS).unref();
+
+// Giới hạn nhẹ riêng cho việc gửi đánh giá sao, tránh bị spam đánh giá ảo.
+const FEEDBACK_RATE_LIMIT_MAX = 10;
+const feedbackHits = new Map();
+
+function isFeedbackRateLimited(ip) {
+  const now = Date.now();
+  const hits = (feedbackHits.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  hits.push(now);
+  feedbackHits.set(ip, hits);
+  return hits.length > FEEDBACK_RATE_LIMIT_MAX;
 }
 
 app.get('/api/health', (req, res) => {
@@ -54,6 +79,9 @@ function appendFeedback(entry) {
 }
 
 app.post('/api/feedback', (req, res) => {
+  if (isFeedbackRateLimited(req.ip)) {
+    return res.status(429).json({ error: 'Bạn đã gửi đánh giá quá nhiều lần, thử lại sau ít phút.' });
+  }
   const { rating, comment } = req.body || {};
   const r = Number(rating);
   if (!Number.isInteger(r) || r < 1 || r > 5) {
@@ -72,6 +100,12 @@ app.post('/api/feedback', (req, res) => {
 });
 
 app.get('/api/feedback/summary', (req, res) => {
+  if (FEEDBACK_TOKEN) {
+    const provided = req.query.token || req.headers['x-feedback-token'];
+    if (provided !== FEEDBACK_TOKEN) {
+      return res.status(401).json({ error: 'Thiếu hoặc sai token truy cập. Thêm ?token=... vào URL.' });
+    }
+  }
   let list = [];
   if (fs.existsSync(FEEDBACK_FILE)) {
     try { list = JSON.parse(fs.readFileSync(FEEDBACK_FILE, 'utf8')); } catch (e) { list = []; }
@@ -135,6 +169,66 @@ app.post('/api/messages', async (req, res) => {
     res.json(data);
   } catch (err) {
     res.status(502).json({ error: 'Không gọi được Anthropic API: ' + err.message });
+  }
+});
+
+// Bản streaming của /api/messages (chỉ dùng cho các lời gọi KHÔNG có tools —
+// stream + tool_use xen kẽ phức tạp hơn nên AI trợ lý điền form vẫn dùng
+// /api/messages thường). Chuyển tiếp thẳng luồng SSE của Anthropic về trình
+// duyệt để chữ hiện dần thay vì chờ AI viết xong hết mới hiện.
+app.post('/api/messages/stream', async (req, res) => {
+  if (!ANTHROPIC_API_KEY) {
+    return res.status(500).json({
+      error: 'Server chưa cấu hình ANTHROPIC_API_KEY. Xem README.md để thêm key vào file .env rồi khởi động lại server.'
+    });
+  }
+
+  if (isRateLimited(req.ip)) {
+    return res.status(429).json({
+      error: 'Bạn đã dùng quá nhiều lần trong 10 phút qua. Vui lòng thử lại sau ít phút.'
+    });
+  }
+
+  const { system, messages, max_tokens, effort } = req.body || {};
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: 'Thiếu messages trong yêu cầu.' });
+  }
+
+  try {
+    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': ANTHROPIC_VERSION
+      },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: max_tokens || 2048,
+        system: system || undefined,
+        messages,
+        output_config: { effort: effort || 'low' },
+        stream: true
+      })
+    });
+
+    if (!upstream.ok) {
+      const data = await upstream.json().catch(() => null);
+      return res.status(upstream.status).json({
+        error: (data && data.error && data.error.message) || 'Lỗi từ Anthropic API',
+        detail: data
+      });
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    Readable.fromWeb(upstream.body).pipe(res);
+  } catch (err) {
+    if (!res.headersSent) {
+      res.status(502).json({ error: 'Không gọi được Anthropic API: ' + err.message });
+    } else {
+      res.end();
+    }
   }
 });
 
